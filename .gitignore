@@ -219,3 +219,6 @@ __marimo__/
 
 # API keys and secrets
 /.key/
+
+# Claude Code
+.claude/
