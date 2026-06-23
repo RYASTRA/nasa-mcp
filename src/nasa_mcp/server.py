@@ -16,25 +16,27 @@ at https://api.nasa.gov.
 
 from __future__ import annotations
 
+import json
 import os
+from contextlib import asynccontextmanager
 from functools import cache
 from typing import Any, Literal, Optional
 from urllib.parse import quote
 
 import httpx
 from fastmcp import FastMCP
+from fastmcp.exceptions import ToolError
 
-mcp = FastMCP(
-    name="nasa-mcp",
-    instructions=(
-        "Tools for NASA's public APIs. Dates are YYYY-MM-DD unless noted "
-        "(DONKI/CNEOS accept the same format). NASA-hosted endpoints use the "
-        "NASA_API_KEY env var, defaulting to the rate-limited DEMO_KEY."
-    ),
-)
+try:  # optional convenience: load NASA_API_KEY from a local .env if available
+    from dotenv import load_dotenv
+
+    load_dotenv()  # does not override variables already set in the environment
+except ModuleNotFoundError:  # pragma: no cover - python-dotenv is optional
+    pass
 
 NASA = "https://api.nasa.gov"
 NASA_KEY = os.environ.get("NASA_API_KEY", "DEMO_KEY")
+
 
 @cache
 def _http() -> httpx.AsyncClient:
@@ -46,23 +48,60 @@ def _http() -> httpx.AsyncClient:
     )
 
 
+@asynccontextmanager
+async def _lifespan(*_args, **_kwargs):
+    """Close the shared AsyncClient on server shutdown (only if it was created)."""
+    try:
+        yield
+    finally:
+        if _http.cache_info().currsize:
+            await _http().aclose()
+
+
+mcp = FastMCP(
+    name="nasa-mcp",
+    instructions=(
+        "Tools for NASA's public APIs. Dates are YYYY-MM-DD unless noted "
+        "(DONKI/CNEOS accept the same format). NASA-hosted endpoints use the "
+        "NASA_API_KEY env var, defaulting to the rate-limited DEMO_KEY."
+    ),
+    lifespan=_lifespan,
+)
+
+
+def _scrub(text: str) -> str:
+    """Redact a real API key from text (defense-in-depth; DEMO_KEY is public)."""
+    if NASA_KEY and NASA_KEY != "DEMO_KEY":
+        return text.replace(NASA_KEY, "***")
+    return text
+
+
 def _clean(params: dict) -> dict:
     """Drop keys whose value is None (keep False/0/'')."""
     return {k: v for k, v in params.items() if v is not None}
 
 
-async def _get(url: str, params: Optional[dict] = None, headers: Optional[dict] = None) -> Any:
+async def _get(
+    url: str,
+    params: Optional[dict] = None,
+    headers: Optional[dict] = None,
+    timeout: Any = httpx.USE_CLIENT_DEFAULT,
+) -> Any:
     try:
-        r = await _http().get(url, params=params, headers=headers)
+        r = await _http().get(url, params=params, headers=headers, timeout=timeout)
         r.raise_for_status()
     except httpx.HTTPStatusError as e:
         body = e.response.text[:300]
-        raise RuntimeError(f"{url} -> HTTP {e.response.status_code}: {body}") from e
+        raise ToolError(_scrub(f"{url} -> HTTP {e.response.status_code}: {body}")) from e
     except httpx.HTTPError as e:
-        raise RuntimeError(f"Request to {url} failed: {e}") from e
+        raise ToolError(_scrub(f"Request to {url} failed: {e}")) from e
     ctype = r.headers.get("content-type", "")
-    if "json" in ctype:
-        return r.json()
+    if "json" in ctype and r.content:
+        try:
+            return r.json()
+        except json.JSONDecodeError:
+            # JSON content-type but an unparseable/empty body — fall back to text.
+            pass
     return {"content_type": ctype, "text": r.text}
 
 
@@ -88,7 +127,7 @@ async def apod(
             "start_date": start_date,
             "end_date": end_date,
             "count": count,
-            "thumbs": thumbs,
+            "thumbs": thumbs or None,
             "api_key": NASA_KEY,
         }
     )
@@ -233,7 +272,7 @@ async def epic(
     if list_available_dates:
         path = f"/EPIC/api/{collection}/all"
     elif date:
-        path = f"/EPIC/api/{collection}/date/{date}"
+        path = f"/EPIC/api/{collection}/date/{quote(date, safe='')}"
     else:
         path = f"/EPIC/api/{collection}"
     return await _get(f"{NASA}{path}", {"api_key": NASA_KEY})
@@ -254,6 +293,7 @@ async def exoplanet_query(
     return await _get(
         "https://exoplanetarchive.ipac.caltech.edu/TAP/sync",
         {"query": query, "format": output_format},
+        timeout=httpx.Timeout(120.0),  # ADQL queries can be slow; allow more headroom
     )
 
 
@@ -337,28 +377,29 @@ async def nivl_asset(nasa_id: str) -> Any:
 # --------------------------------------------------------------------------- #
 @mcp.tool
 async def osdr_search(
-    term: str, from_: int = 0, size: int = 25, data_type: Optional[str] = None
+    term: str, offset: int = 0, size: int = 25, data_type: Optional[str] = None
 ) -> Any:
     """Search OSDR study datasets (space biology / life sciences).
 
-    `data_type` can restrict the source: cgene, nih_geo_gse, ebi_pride, mg_rast.
+    `offset` is the result offset (sent as the API's `from`); `data_type` can
+    restrict the source: cgene, nih_geo_gse, ebi_pride, mg_rast.
     """
     return await _get(
         "https://osdr.nasa.gov/osdr/data/search",
-        _clean({"term": term, "from": from_, "size": size, "type": data_type}),
+        _clean({"term": term, "from": offset, "size": size, "type": data_type}),
     )
 
 
 @mcp.tool
 async def osdr_study_files(accession: str) -> Any:
     """List data files for OSDR study accession(s), e.g. '87' or '137,87-95,153.2'."""
-    return await _get(f"https://osdr.nasa.gov/osdr/data/osd/files/{accession}")
+    return await _get(f"https://osdr.nasa.gov/osdr/data/osd/files/{quote(accession, safe=',')}")
 
 
 @mcp.tool
 async def osdr_study_metadata(accession: str) -> Any:
     """Get the full metadata set for an OSDR study accession number, e.g. '137'."""
-    return await _get(f"https://osdr.nasa.gov/osdr/data/osd/meta/{accession}")
+    return await _get(f"https://osdr.nasa.gov/osdr/data/osd/meta/{quote(accession, safe=',')}")
 
 
 # --------------------------------------------------------------------------- #

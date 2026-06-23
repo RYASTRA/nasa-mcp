@@ -8,9 +8,13 @@ license = { text = "MIT" }
 authors = [{ name = "Ryan" }]
 keywords = ["nasa", "mcp", "model-context-protocol", "api", "space"]
 dependencies = [
-    "fastmcp>=2.0.0",
+    "fastmcp>=3.0,<4",
     "httpx>=0.27",
+    "python-dotenv>=1.0",
 ]
+
+[project.optional-dependencies]
+dev = ["pytest>=8"]
 
 [project.scripts]
 nasa-mcp = "nasa_mcp.server:main"

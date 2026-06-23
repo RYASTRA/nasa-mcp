@@ -29,17 +29,15 @@ Built with [FastMCP](https://gofastmcp.com) (tested on FastMCP 3.4) + httpx.
 
 ## Setup
 
-Requires Python 3.10+. Using [uv](https://docs.astral.sh/uv/) (recommended):
+Requires Python 3.10+. From the repository root, using [uv](https://docs.astral.sh/uv/) (recommended):
 
 ```bash
-cd nasa-mcp
 uv sync
 ```
 
 Or with pip:
 
 ```bash
-cd nasa-mcp
 pip install -e .
 ```
 
@@ -53,7 +51,7 @@ export NASA_API_KEY=your_key_here
 
 The non-NASA-hosted services (EONET, Exoplanet Archive, NIVL, OSDR, SSC, SSD/CNEOS, TLE, GIBS, Trek) need no key.
 
-> **Security note:** keep your key out of version control — set it as an environment variable or in a local `.env` (see `.env.example`), which the standard Python `.gitignore` already excludes. Don't commit it to the repo.
+> **Security note:** keep your key out of version control — set it as an environment variable, or copy `.env.example` to `.env` and put it there. The server auto-loads `.env` (via python-dotenv) without overriding variables already set in the environment, and `.gitignore` already excludes `.env`. Don't commit your key to the repo.
 
 ## Run
 
@@ -61,6 +59,13 @@ The non-NASA-hosted services (EONET, Exoplanet Archive, NIVL, OSDR, SSC, SSD/CNE
 uv run nasa-mcp        # stdio transport
 # or
 python -m nasa_mcp.server
+```
+
+## Development
+
+```bash
+pip install -e ".[dev]"
+pytest
 ```
 
 ## Use it from Claude
@@ -72,7 +77,7 @@ python -m nasa_mcp.server
   "mcpServers": {
     "nasa": {
       "command": "uv",
-      "args": ["run", "--directory", "/ABSOLUTE/PATH/TO/rynasa/nasa-mcp", "nasa-mcp"],
+      "args": ["run", "--directory", "/ABSOLUTE/PATH/TO/nasa-mcp", "nasa-mcp"],
       "env": { "NASA_API_KEY": "your_key_here" }
     }
   }
@@ -82,7 +87,7 @@ python -m nasa_mcp.server
 **Claude Code** — from the repo:
 
 ```bash
-claude mcp add nasa --env NASA_API_KEY=your_key_here -- uv run --directory "$(pwd)/nasa-mcp" nasa-mcp
+claude mcp add nasa --env NASA_API_KEY=your_key_here -- uv run --directory "$(pwd)" nasa-mcp
 ```
 
 Then ask things like *"Show me today's APOD,"* *"Which asteroids pass within 5 lunar distances this month?"*, or *"Any geomagnetic storms logged by DONKI last week?"*
