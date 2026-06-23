@@ -1,0 +1,30 @@
+[project]
+name = "nasa-mcp"
+version = "0.1.0"
+description = "A unified MCP server exposing NASA's public APIs (api.nasa.gov and friends)."
+readme = "README.md"
+requires-python = ">=3.10"
+license = { text = "MIT" }
+authors = [{ name = "Ryan" }]
+keywords = ["nasa", "mcp", "model-context-protocol", "api", "space"]
+dependencies = [
+    "fastmcp>=2.0.0",
+    "httpx>=0.27",
+]
+
+[project.scripts]
+nasa-mcp = "nasa_mcp.server:main"
+
+[build-system]
+requires = ["hatchling"]
+build-backend = "hatchling.build"
+
+[tool.hatch.build.targets.wheel]
+packages = ["src/nasa_mcp"]
+
+[tool.pylint.design]
+# Each MCP tool's parameters are its public input schema, so several tools
+# legitimately expose more arguments than the default of 5 (e.g. `donki`
+# mirrors the DONKI API's per-service knobs). Raise the threshold to match.
+max-args = 11
+max-positional-arguments = 11
