@@ -122,15 +122,15 @@ async def _get(
         except httpx.HTTPError as e:
             # Non-transport protocol errors (e.g. bad URL) — not worth retrying.
             raise ToolError(_scrub(f"Request to {url} failed: {e}")) from e
-        else:
-            ctype = r.headers.get("content-type", "")
-            if "json" in ctype and r.content:
-                try:
-                    return r.json()
-                except json.JSONDecodeError:
-                    # JSON content-type but an unparseable/empty body — fall back to text.
-                    pass
-            return {"content_type": ctype, "text": r.text}
+        # Reached only on success — every except above continues or raises.
+        ctype = r.headers.get("content-type", "")
+        if "json" in ctype and r.content:
+            try:
+                return r.json()
+            except json.JSONDecodeError:
+                # JSON content-type but an unparseable/empty body — fall back to text.
+                pass
+        return {"content_type": ctype, "text": r.text}
     # Loop only exits via continue/return/raise; this satisfies type-checkers.
     raise ToolError(_scrub(f"Request to {url} failed: {last_exc}"))
 
