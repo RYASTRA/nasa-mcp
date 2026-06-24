@@ -26,6 +26,12 @@ build-backend = "hatchling.build"
 [tool.hatch.build.targets.wheel]
 packages = ["src/nasa_mcp"]
 
+[tool.pylint.main]
+# nasa-mcp uses a src/ layout, so the importable package lives in src/nasa_mcp.
+# Tell pylint that src/ is a source root so `import nasa_mcp` resolves during
+# analysis without installing the package. Kept in sync with .pylintrc's [MAIN].
+source-roots = ["src"]
+
 [tool.pylint.design]
 # Each MCP tool's parameters are its public input schema, so several tools
 # legitimately expose more arguments than the default of 5 (e.g. `donki`
