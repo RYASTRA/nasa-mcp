@@ -3,7 +3,7 @@ name = "nasa-mcp"
 version = "0.1.0"
 description = "A unified MCP server exposing NASA's public APIs (api.nasa.gov and friends)."
 readme = "README.md"
-requires-python = ">=3.10"
+requires-python = ">=3.14"
 license = { text = "MIT" }
 authors = [{ name = "Ryan" }]
 keywords = ["nasa", "mcp", "model-context-protocol", "api", "space"]
