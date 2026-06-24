@@ -225,3 +225,6 @@ __marimo__/
 
 # pylint config (local lint setup, not part of the project)
 .pylintrc
+
+# Local tests directory — not part of the published project
+/tests/
