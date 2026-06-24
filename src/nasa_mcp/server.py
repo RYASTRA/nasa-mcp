@@ -102,7 +102,10 @@ async def _get(
             r.raise_for_status()
         except httpx.HTTPStatusError as e:
             # Retry transient server/rate-limit responses; surface everything else.
-            if e.response.status_code in _RETRY_STATUSES and attempt < _MAX_ATTEMPTS - 1:
+            if (
+                e.response.status_code in _RETRY_STATUSES
+                and attempt < _MAX_ATTEMPTS - 1
+            ):
                 last_exc = e
                 await asyncio.sleep(_BACKOFF_BASE * 2**attempt)
                 continue
