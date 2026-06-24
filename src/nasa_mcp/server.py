@@ -92,7 +92,9 @@ async def _get(
         r.raise_for_status()
     except httpx.HTTPStatusError as e:
         body = e.response.text[:300]
-        raise ToolError(_scrub(f"{url} -> HTTP {e.response.status_code}: {body}")) from e
+        raise ToolError(
+            _scrub(f"{url} -> HTTP {e.response.status_code}: {body}")
+        ) from e
     except httpx.HTTPError as e:
         raise ToolError(_scrub(f"Request to {url} failed: {e}")) from e
     ctype = r.headers.get("content-type", "")
@@ -152,7 +154,9 @@ async def neo_feed(start_date: str, end_date: Optional[str] = None) -> Any:
 @mcp.tool
 async def neo_lookup(asteroid_id: str) -> Any:
     """Look up a single asteroid by its NASA JPL small-body (SPK) ID, e.g. '3542519'."""
-    return await _get(f"{NASA}/neo/rest/v1/neo/{quote(asteroid_id)}", {"api_key": NASA_KEY})
+    return await _get(
+        f"{NASA}/neo/rest/v1/neo/{quote(asteroid_id)}", {"api_key": NASA_KEY}
+    )
 
 
 @mcp.tool
@@ -202,7 +206,11 @@ async def donki(
     (`most_accurate_only`, `speed`, `half_angle`, `catalog`, `keyword`) apply to
     CMEAnalysis; `notification_type` (e.g. 'all', 'FLR', 'CME') applies to notifications.
     """
-    params: dict[str, Any] = {"startDate": start_date, "endDate": end_date, "api_key": NASA_KEY}
+    params: dict[str, Any] = {
+        "startDate": start_date,
+        "endDate": end_date,
+        "api_key": NASA_KEY,
+    }
     if service == "IPS":
         params.update(location=location, catalog=catalog)
     elif service == "CMEAnalysis":
@@ -393,13 +401,17 @@ async def osdr_search(
 @mcp.tool
 async def osdr_study_files(accession: str) -> Any:
     """List data files for OSDR study accession(s), e.g. '87' or '137,87-95,153.2'."""
-    return await _get(f"https://osdr.nasa.gov/osdr/data/osd/files/{quote(accession, safe=',')}")
+    return await _get(
+        f"https://osdr.nasa.gov/osdr/data/osd/files/{quote(accession, safe=',')}"
+    )
 
 
 @mcp.tool
 async def osdr_study_metadata(accession: str) -> Any:
     """Get the full metadata set for an OSDR study accession number, e.g. '137'."""
-    return await _get(f"https://osdr.nasa.gov/osdr/data/osd/meta/{quote(accession, safe=',')}")
+    return await _get(
+        f"https://osdr.nasa.gov/osdr/data/osd/meta/{quote(accession, safe=',')}"
+    )
 
 
 # --------------------------------------------------------------------------- #
@@ -434,12 +446,21 @@ async def ssd_close_approaches(
     """
     return await _get(
         "https://ssd-api.jpl.nasa.gov/cad.api",
-        _clean({"date-min": date_min, "date-max": date_max, "dist-max": dist_max, "body": body}),
+        _clean(
+            {
+                "date-min": date_min,
+                "date-max": date_max,
+                "dist-max": dist_max,
+                "body": body,
+            }
+        ),
     )
 
 
 @mcp.tool
-async def ssd_fireballs(date_min: Optional[str] = None, limit: Optional[int] = None) -> Any:
+async def ssd_fireballs(
+    date_min: Optional[str] = None, limit: Optional[int] = None
+) -> Any:
     """JPL CNEOS fireball atmospheric-impact data reported by US Government sensors."""
     return await _get(
         "https://ssd-api.jpl.nasa.gov/fireball.api",
@@ -475,7 +496,9 @@ async def techport_projects(updated_since: Optional[str] = None) -> Any:
 @mcp.tool
 async def techport_project(project_id: int) -> Any:
     """Get a single TechPort technology project's full record by numeric ID."""
-    return await _get(f"{NASA}/techport/api/projects/{project_id}", {"api_key": NASA_KEY})
+    return await _get(
+        f"{NASA}/techport/api/projects/{project_id}", {"api_key": NASA_KEY}
+    )
 
 
 # --------------------------------------------------------------------------- #
