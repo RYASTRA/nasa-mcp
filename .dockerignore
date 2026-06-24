@@ -1,0 +1,23 @@
+# Keep secrets and local cruft out of the Docker build context.
+# .env holds the real NASA_API_KEY — it must never enter the build.
+.env
+.env.*
+
+# Version control and local tooling state
+.git/
+.gitignore
+.claude/
+.vscode/
+
+# Python / test / lint caches and any local virtualenv.
+# Use **/ so the patterns match at any depth (bare `__pycache__/` and `*.pyc`
+# only match the top level, letting nested src/**/__pycache__ leak into the image).
+.venv/
+**/__pycache__/
+**/*.pyc
+.pytest_cache/
+.ruff_cache/
+
+# Not needed in the runtime image (the test stage pulls what it needs via COPY . .)
+docs/
+uv.lock

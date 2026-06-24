@@ -2,7 +2,7 @@
 
 A unified [MCP](https://modelcontextprotocol.io) server that exposes **all 16 of NASA's public APIs** (from the "Browse APIs" section of [api.nasa.gov](https://api.nasa.gov)) as tools an AI agent can call — one server, one config entry, the whole catalog.
 
-Built with [FastMCP](https://gofastmcp.com) (tested on FastMCP 3.4) + httpx.
+Built with [FastMCP](https://gofastmcp.com) (tested on FastMCP 3.4) + httpx, and shipped as a Docker image so it runs with **nothing but Docker** on your machine — no Python, uv, or pyenv required.
 
 ## What's covered
 
@@ -27,48 +27,43 @@ Built with [FastMCP](https://gofastmcp.com) (tested on FastMCP 3.4) + httpx.
 | TLE | `tle_search`, `tle_get` |
 | Vesta/Moon/Mars Trek | `trek_tile_url` (WMTS tile-URL builder) |
 
-## Setup
+## Build
 
-Requires Python 3.10+. From the repository root, using [uv](https://docs.astral.sh/uv/) (recommended):
-
-```bash
-uv sync
-```
-
-Or with pip:
+You need only **Docker** installed and running. The image isn't published to a registry, so build it once from the repo root:
 
 ```bash
-pip install -e .
+docker build -t nasa-mcp .
 ```
+
+That produces a local image named `nasa-mcp`. Everything below uses it. Because the image is local-only, the build must come **before** any `docker run` — otherwise Docker tries to pull a registry image that doesn't exist and fails. (Confirm it built with `docker images nasa-mcp`.)
 
 ## API key
 
 NASA-hosted endpoints (APOD, NeoWs, DONKI, EPIC, InSight, TechPort, TechTransfer) read your key from the `NASA_API_KEY` environment variable and fall back to `DEMO_KEY` if it's unset. `DEMO_KEY` works for light testing but is rate-limited (30 req/hr, 50 req/day). Grab a free key in seconds at <https://api.nasa.gov>.
 
+You pass the key into the container at runtime with `-e` — it is never baked into the image:
+
 ```bash
-export NASA_API_KEY=your_key_here
+docker run --rm -i -e NASA_API_KEY=your_key_here nasa-mcp
 ```
 
 The non-NASA-hosted services (EONET, Exoplanet Archive, NIVL, OSDR, SSC, SSD/CNEOS, TLE, GIBS, Trek) need no key.
 
-> **Security note:** keep your key out of version control — set it as an environment variable, or copy `.env.example` to `.env` and put it there. The server auto-loads `.env` (via python-dotenv) without overriding variables already set in the environment, and `.gitignore` already excludes `.env`. Don't commit your key to the repo.
+> **Security note:** the key lives only in your `docker run -e` flag or your MCP client config — never commit it. `.dockerignore` keeps `.env` out of the build context (so it can't be baked into the image) and `.gitignore` excludes `.env` from version control.
 
 ## Run
 
-```bash
-uv run nasa-mcp        # stdio transport
-# or
-python -m nasa_mcp.server
-```
-
-## Development
+The server speaks MCP over **stdio**, so run it interactively:
 
 ```bash
-pip install -e ".[dev]"
-pytest
+docker run --rm -i -e NASA_API_KEY=your_key_here nasa-mcp
 ```
+
+It then waits on stdin for a JSON-RPC handshake — that's expected; your MCP client drives the conversation (Ctrl-C to exit). Keep `-i` so stdin stays open, and do **not** add `-t`: a TTY corrupts the stdio JSON-RPC stream.
 
 ## Use it from Claude
+
+Build the image first (`docker build -t nasa-mcp .`). The tag `nasa-mcp` refers to that **local** image — there is no registry copy, so if you skip the build the client will fail trying to pull it.
 
 **Claude Desktop** — add to `claude_desktop_config.json`:
 
@@ -76,21 +71,34 @@ pytest
 {
   "mcpServers": {
     "nasa": {
-      "command": "uv",
-      "args": ["run", "--directory", "/ABSOLUTE/PATH/TO/nasa-mcp", "nasa-mcp"],
+      "command": "docker",
+      "args": ["run", "--rm", "-i", "-e", "NASA_API_KEY", "nasa-mcp"],
       "env": { "NASA_API_KEY": "your_key_here" }
     }
   }
 }
 ```
 
-**Claude Code** — from the repo:
+**Claude Code:**
 
 ```bash
-claude mcp add nasa --env NASA_API_KEY=your_key_here -- uv run --directory "$(pwd)" nasa-mcp
+claude mcp add nasa --env NASA_API_KEY=your_key_here -- docker run --rm -i -e NASA_API_KEY nasa-mcp
 ```
 
+`-e NASA_API_KEY` (a bare name, no `=value`) copies the variable from `docker run`'s own environment into the container; the client supplies its value from the `env` block. So the key stays out of the argument list and is never baked into the image. `docker` must be on your client's `PATH` — Docker Desktop puts it there automatically.
+
 Then ask things like *"Show me today's APOD,"* *"Which asteroids pass within 5 lunar distances this month?"*, or *"Any geomagnetic storms logged by DONKI last week?"*
+
+## Development
+
+Run the test suite entirely in a container — no Python on your host:
+
+```bash
+docker build --target test -t nasa-mcp-test .
+docker run --rm nasa-mcp-test
+```
+
+The `test` stage (see the [`Dockerfile`](Dockerfile)) installs the dev extras and runs `pytest` against `tests/`.
 
 ## Notes
 
