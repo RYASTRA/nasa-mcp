@@ -17,7 +17,7 @@ Built with [FastMCP](https://gofastmcp.com) (tested on FastMCP 3.4) + httpx, and
 | EPIC | `epic` |
 | Exoplanet Archive | `exoplanet_query` (ADQL via TAP) |
 | GIBS | `gibs_tile_url` (WMTS tile-URL builder) |
-| InSight (Mars weather) | `insight_weather` |
+| Mars weather (Curiosity/MSL) | `mars_weather` |
 | NASA Image & Video Library | `nivl_search`, `nivl_asset` |
 | Open Science Data Repository | `osdr_search`, `osdr_study_files`, `osdr_study_metadata` |
 | Satellite Situation Center | `ssc_observatories` |
@@ -39,7 +39,7 @@ That produces a local image named `nasa-mcp`. Everything below uses it. Because 
 
 ## API key
 
-NASA-hosted endpoints (APOD, NeoWs, DONKI, EPIC, InSight, TechPort, TechTransfer) read your key from the `NASA_API_KEY` environment variable and fall back to `DEMO_KEY` if it's unset. `DEMO_KEY` works for light testing but is rate-limited (30 req/hr, 50 req/day). Grab a free key in seconds at <https://api.nasa.gov>.
+NASA-hosted endpoints (APOD, NeoWs, DONKI, EPIC, TechPort, TechTransfer) read your key from the `NASA_API_KEY` environment variable and fall back to `DEMO_KEY` if it's unset. `DEMO_KEY` works for light testing but is rate-limited (30 req/hr, 50 req/day). Grab a free key in seconds at <https://api.nasa.gov>.
 
 You pass the key into the container at runtime with `-e` — it is never baked into the image:
 
@@ -47,7 +47,7 @@ You pass the key into the container at runtime with `-e` — it is never baked i
 docker run --rm -i -e NASA_API_KEY=your_key_here nasa-mcp
 ```
 
-The non-NASA-hosted services (EONET, Exoplanet Archive, NIVL, OSDR, SSC, SSD/CNEOS, TLE, GIBS, Trek) need no key.
+The non-NASA-hosted services (EONET, Exoplanet Archive, Mars weather, NIVL, OSDR, SSC, SSD/CNEOS, TLE, GIBS, Trek) need no key. `mars_weather` pulls Curiosity's live REMS feed from `mars.nasa.gov`, which is keyless.
 
 > **Security note:** the key lives only in your `docker run -e` flag or your MCP client config — never commit it. `.dockerignore` keeps `.env` out of the build context (so it can't be baked into the image) and `.gitignore` excludes `.env` from version control.
 

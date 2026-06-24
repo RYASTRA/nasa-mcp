@@ -4,8 +4,8 @@ nasa-mcp: a unified MCP server for NASA's public APIs (api.nasa.gov and friends)
 One server exposing tools for all 16 APIs listed in the "Browse APIs" section of
 api.nasa.gov:
 
-  APOD, Asteroids NeoWs, DONKI, EONET, EPIC, Exoplanet Archive, GIBS, InSight
-  (Mars weather), NASA Image & Video Library, Open Science Data Repository,
+  APOD, Asteroids NeoWs, DONKI, EONET, EPIC, Exoplanet Archive, GIBS, Mars
+  weather (Curiosity/MSL), NASA Image & Video Library, Open Science Data Repository,
   Satellite Situation Center, SSD/CNEOS, TechPort, TechTransfer, TLE, and the
   Vesta/Moon/Mars Trek WMTS tile services.
 
@@ -334,18 +334,97 @@ def gibs_tile_url(
 
 
 # --------------------------------------------------------------------------- #
-# InSight — Mars Weather Service
+# Mars weather — Curiosity rover (MSL / REMS)
 # --------------------------------------------------------------------------- #
-@mcp.tool
-async def insight_weather() -> Any:
-    """Per-Sol Mars weather (temp, wind, pressure) from the InSight lander.
+# Live REMS feed served by mars.nasa.gov (NOT api.nasa.gov): no API key, and the
+# trailing slash on `/api/` avoids a 301 redirect. One response carries the whole
+# mission (thousands of sols, newest-first), so we filter/slice locally.
+MSL_WEATHER_FEED = "https://mars.nasa.gov/rss/api/"
 
-    Note: the mission has ended, so this returns sparse, historical data with gaps.
+
+def _num(value: Any) -> Any:
+    """Parse a REMS field: '--'/'' -> None, numeric strings -> int/float, else as-is.
+
+    REMS' wind and humidity sensors are degraded and report the literal string
+    '--', so callers get null rather than a crash or a bogus number.
     """
-    return await _get(
-        f"{NASA}/insight_weather/",
-        {"api_key": NASA_KEY, "feedtype": "json", "ver": "1.0"},
+    if value in (None, "", "--"):
+        return None
+    text = str(value).strip()
+    try:
+        return float(text) if ("." in text or "e" in text.lower()) else int(text)
+    except ValueError:
+        return value
+
+
+def _sol_summary(s: dict) -> dict:
+    """Reshape one raw REMS sol into clearly-named, unit-tagged fields."""
+    return {
+        "sol": _num(s.get("sol")),
+        "terrestrial_date": s.get("terrestrial_date"),
+        "ls": _num(s.get("ls")),  # solar longitude (deg)
+        "season": s.get("season"),
+        "min_air_temp_c": _num(s.get("min_temp")),
+        "max_air_temp_c": _num(s.get("max_temp")),
+        "min_ground_temp_c": _num(s.get("min_gts_temp")),
+        "max_ground_temp_c": _num(s.get("max_gts_temp")),
+        "pressure_pa": _num(s.get("pressure")),
+        "pressure_trend": s.get("pressure_string"),
+        "abs_humidity": _num(s.get("abs_humidity")),  # often null (sensor degraded)
+        "wind_speed": _num(s.get("wind_speed")),  # often null (sensor degraded)
+        "wind_direction": s.get("wind_direction"),  # often '--'
+        "atmo_opacity": s.get("atmo_opacity"),
+        "uv_index": s.get("local_uv_irradiance_index"),
+        "sunrise": s.get("sunrise"),
+        "sunset": s.get("sunset"),
+    }
+
+
+@mcp.tool
+async def mars_weather(
+    limit: Optional[int] = 10,
+    sol: Optional[int] = None,
+    date: Optional[str] = None,
+) -> Any:
+    """Recent per-Sol Mars surface weather from the Curiosity rover (MSL / REMS).
+
+    Live feed from mars.nasa.gov (no API key needed), updated within a few days.
+    Sols are returned newest-first with air and ground temperature (°C), pressure
+    (Pa), atmospheric opacity, UV index, season/solar-longitude, and sunrise/sunset.
+    Curiosity's wind and humidity sensors are degraded, so those fields are usually
+    null.
+
+    Filters (all optional):
+      - `limit`: max sols to return, newest first (default 10; use 0 for all ~4700).
+      - `sol`: return only this Martian day number.
+      - `date`: return only this Earth date (YYYY-MM-DD).
+    """
+    data = await _get(
+        MSL_WEATHER_FEED,
+        {"feed": "weather", "category": "msl", "feedtype": "json", "ver": "1.0"},
     )
+    if not isinstance(data, dict):
+        raise ToolError(f"Unexpected response from Mars weather feed: {data!r:.200}")
+
+    soles = data.get("soles") or []
+    if sol is not None:
+        soles = [s for s in soles if str(s.get("sol")) == str(sol)]
+    if date is not None:
+        soles = [s for s in soles if s.get("terrestrial_date") == date]
+    # Feed is already newest-first; slice unless limit is 0/None (= all).
+    if limit:
+        soles = soles[:limit]
+
+    descriptions = data.get("descriptions") or {}
+    return {
+        "source": (
+            "NASA/JPL-Caltech & Centro de Astrobiología (CAB) — Curiosity rover "
+            "REMS, via mars.nasa.gov"
+        ),
+        "disclaimer": descriptions.get("disclaimer_en"),
+        "sol_count": len(soles),
+        "soles": [_sol_summary(s) for s in soles],
+    }
 
 
 # --------------------------------------------------------------------------- #

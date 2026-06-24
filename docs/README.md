@@ -11,7 +11,7 @@ Local copies of the documentation for each API listed in the **Browse APIs** sec
 | EPIC — Earth Polychromatic Imaging Camera | [EPIC.md](EPIC.md) |
 | Exoplanet — NASA's Exoplanet Archive database | [Exoplanet.md](Exoplanet.md) |
 | GIBS — Global Imagery Browse Services | [GIBS.md](GIBS.md) |
-| InSight — Mars Weather Service API | [InSight.md](InSight.md) |
+| Mars Weather — Curiosity Rover (MSL/REMS) | [Mars-Weather.md](Mars-Weather.md) |
 | NASA Image and Video Library | [NASA-Image-and-Video-Library.md](NASA-Image-and-Video-Library.md) |
 | Open Science Data Repository | [Open-Science-Data-Repository.md](Open-Science-Data-Repository.md) |
 | Satellite Situation Center | [Satellite-Situation-Center.md](Satellite-Situation-Center.md) |
