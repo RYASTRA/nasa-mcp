@@ -16,6 +16,7 @@ at https://api.nasa.gov.
 
 from __future__ import annotations
 
+import asyncio
 import json
 import os
 from contextlib import asynccontextmanager
@@ -81,30 +82,57 @@ def _clean(params: dict) -> dict:
     return {k: v for k, v in params.items() if v is not None}
 
 
+# Transient upstream conditions worth retrying: rate-limit + 5xx. (NASA's APOD
+# endpoint, for instance, intermittently 503s and recovers within seconds.)
+_RETRY_STATUSES = frozenset({429, 500, 502, 503, 504})
+_MAX_ATTEMPTS = 3  # total tries (so up to 2 retries)
+_BACKOFF_BASE = 0.5  # seconds; doubled each retry (0.5s, 1.0s, ...)
+
+
 async def _get(
     url: str,
     params: Optional[dict] = None,
     headers: Optional[dict] = None,
     timeout: Any = httpx.USE_CLIENT_DEFAULT,
 ) -> Any:
-    try:
-        r = await _http().get(url, params=params, headers=headers, timeout=timeout)
-        r.raise_for_status()
-    except httpx.HTTPStatusError as e:
-        body = e.response.text[:300]
-        raise ToolError(
-            _scrub(f"{url} -> HTTP {e.response.status_code}: {body}")
-        ) from e
-    except httpx.HTTPError as e:
-        raise ToolError(_scrub(f"Request to {url} failed: {e}")) from e
-    ctype = r.headers.get("content-type", "")
-    if "json" in ctype and r.content:
+    last_exc: Optional[Exception] = None
+    for attempt in range(_MAX_ATTEMPTS):
         try:
-            return r.json()
-        except json.JSONDecodeError:
-            # JSON content-type but an unparseable/empty body — fall back to text.
-            pass
-    return {"content_type": ctype, "text": r.text}
+            r = await _http().get(url, params=params, headers=headers, timeout=timeout)
+            r.raise_for_status()
+        except httpx.HTTPStatusError as e:
+            # Retry transient server/rate-limit responses; surface everything else.
+            if e.response.status_code in _RETRY_STATUSES and attempt < _MAX_ATTEMPTS - 1:
+                last_exc = e
+                await asyncio.sleep(_BACKOFF_BASE * 2**attempt)
+                continue
+            body = e.response.text[:300]
+            raise ToolError(
+                _scrub(f"{url} -> HTTP {e.response.status_code}: {body}")
+            ) from e
+        except httpx.TransportError as e:
+            # Timeouts, connection resets, DNS hiccups — transient; retry.
+            if attempt < _MAX_ATTEMPTS - 1:
+                last_exc = e
+                await asyncio.sleep(_BACKOFF_BASE * 2**attempt)
+                continue
+            raise ToolError(
+                _scrub(f"Request to {url} failed after {_MAX_ATTEMPTS} attempts: {e}")
+            ) from e
+        except httpx.HTTPError as e:
+            # Non-transport protocol errors (e.g. bad URL) — not worth retrying.
+            raise ToolError(_scrub(f"Request to {url} failed: {e}")) from e
+        else:
+            ctype = r.headers.get("content-type", "")
+            if "json" in ctype and r.content:
+                try:
+                    return r.json()
+                except json.JSONDecodeError:
+                    # JSON content-type but an unparseable/empty body — fall back to text.
+                    pass
+            return {"content_type": ctype, "text": r.text}
+    # Loop only exits via continue/return/raise; this satisfies type-checkers.
+    raise ToolError(_scrub(f"Request to {url} failed: {last_exc}"))
 
 
 # --------------------------------------------------------------------------- #
