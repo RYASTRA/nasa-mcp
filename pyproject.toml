@@ -10,7 +10,7 @@ keywords = ["nasa", "mcp", "model-context-protocol", "api", "space"]
 dependencies = [
     "fastmcp>=3.4.4,<4",
     "httpx>=0.27",
-    "python-dotenv>=1.0",
+    "python-dotenv>=1.2.2",
 ]
 
 [project.optional-dependencies]
