@@ -7,6 +7,9 @@ permissions:
 
 jobs:
   mirror:
+    # Dependabot-triggered workflows cannot access Actions secrets, so its
+    # temporary branches are mirrored only after their changes reach main.
+    if: github.actor != 'dependabot[bot]'
     runs-on: ubuntu-latest
     steps:
       - name: Checkout code
