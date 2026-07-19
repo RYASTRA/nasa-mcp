@@ -8,7 +8,7 @@
 # Build the server image (default):  docker build -t nasa-mcp .
 # Build + run the tests:             docker build --target test -t nasa-mcp-test . && docker run --rm nasa-mcp-test
 
-FROM python:3.14.3-slim AS base
+FROM python:3.14.6-slim AS base
 
 # PYTHONUNBUFFERED keeps the stdio JSON-RPC stream flowing (no buffered stalls).
 ENV PYTHONUNBUFFERED=1 \
