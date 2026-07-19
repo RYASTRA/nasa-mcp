@@ -2,6 +2,9 @@ name: Mirror to GitLab
 
 on: [push, delete]
 
+permissions:
+  contents: read
+
 jobs:
   mirror:
     runs-on: ubuntu-latest
