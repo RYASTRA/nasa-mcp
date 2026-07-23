@@ -96,3 +96,15 @@ Then ask things like *"Show me today's APOD,"* *"Which asteroids pass within 5 l
 - `gibs_tile_url` and `trek_tile_url` **construct** WMTS tile URLs rather than fetching them (those services return image tiles, not JSON). Each returns a capabilities URL so an agent can discover valid layers/products, matrix sets, and formats.
 - `exoplanet_query` takes raw ADQL, e.g. `select pl_name, hostname, disc_year from ps where disc_year > 2020`.
 - Trek tile paths are best-effort; some mosaics use `.jpg` or a different tile matrix set — verify against the per-body capabilities listing the tool returns.
+
+## The RYASTRA fleet
+
+| Repo | What it is |
+|---|---|
+| [nasa-defense](https://github.com/RYASTRA/nasa-defense) | Planetary-defense watch (the original watcher engine) |
+| **nasa-mcp** | All 16 NASA public APIs as an MCP server (R&D layer) *(this repo)* |
+| [nasa-new-worlds](https://github.com/RYASTRA/nasa-new-worlds) | New-worlds watch — exoplanet confirmations |
+| [nasa-observatory](https://github.com/RYASTRA/nasa-observatory) | Fleet dashboard — one tile per watcher |
+| [nasa-space-biology](https://github.com/RYASTRA/nasa-space-biology) | Faceted explorer for OSDR space-biology studies |
+| [nasa-space-weather](https://github.com/RYASTRA/nasa-space-weather) | Space-weather watch |
+| [nasa-tech-explorer](https://github.com/RYASTRA/nasa-tech-explorer) | NASA patents, free software & spinoffs — searchable |
