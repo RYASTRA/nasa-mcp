@@ -8,7 +8,7 @@ license = { text = "MIT" }
 authors = [{ name = "Ryan" }]
 keywords = ["nasa", "mcp", "model-context-protocol", "api", "space"]
 dependencies = [
-    "fastmcp>=3.4.5,<4",
+    "fastmcp>=3.4.7,<4",
     "httpx>=0.28.1",
     "python-dotenv>=1.2.3",
 ]
