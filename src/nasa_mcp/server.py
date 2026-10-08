@@ -9,7 +9,7 @@ api.nasa.gov:
   Satellite Situation Center, SSD/CNEOS, TechPort, TechTransfer, TLE, and the
   Vesta/Moon/Mars Trek WMTS tile services.
 
-The NASA-hosted endpoints use an API key read from the NASA_API_KEY environment
+The keyed NASA endpoints use an API key read from the NASA_API_KEY environment
 variable (falling back to DEMO_KEY, which is heavily rate-limited). Get a free key
 at https://api.nasa.gov.
 """
@@ -36,6 +36,7 @@ except ModuleNotFoundError:  # pragma: no cover - python-dotenv is optional
     pass
 
 NASA = "https://api.nasa.gov"
+DONKI = "https://ccmc.gsfc.nasa.gov/DONKI-API/get"
 NASA_KEY = os.environ.get("NASA_API_KEY", "DEMO_KEY")
 
 
@@ -63,8 +64,9 @@ mcp = FastMCP(
     name="nasa-mcp",
     instructions=(
         "Tools for NASA's public APIs. Dates are YYYY-MM-DD unless noted "
-        "(DONKI/CNEOS accept the same format). NASA-hosted endpoints use the "
-        "NASA_API_KEY env var, defaulting to the rate-limited DEMO_KEY."
+        "(DONKI/CNEOS accept the same format). Keyed NASA endpoints use the "
+        "NASA_API_KEY env var, defaulting to the rate-limited DEMO_KEY. "
+        "DONKI uses the public CCMC API and needs no key."
     ),
     lifespan=_lifespan,
 )
@@ -236,11 +238,12 @@ async def donki(
     Dates are YYYY-MM-DD. `location`/`catalog` apply to IPS; the CME-analysis knobs
     (`most_accurate_only`, `speed`, `half_angle`, `catalog`, `keyword`) apply to
     CMEAnalysis; `notification_type` (e.g. 'all', 'FLR', 'CME') applies to notifications.
+
+    Uses NASA's public CCMC API; no API key is required.
     """
     params: dict[str, Any] = {
         "startDate": start_date,
         "endDate": end_date,
-        "api_key": NASA_KEY,
     }
     if service == "IPS":
         params.update(location=location, catalog=catalog)
@@ -255,7 +258,13 @@ async def donki(
         )
     elif service == "notifications":
         params.update(type=notification_type)
-    return await _get(f"{NASA}/DONKI/{service}", _clean(params))
+    result = await _get(f"{DONKI}/{service}", _clean(params))
+    # DONKI returns a JSON event list (or null when no data is available). The
+    # shared helper also supports text APIs, so reject its HTML/text result here
+    # instead of returning a migration notice as a successful space-weather call.
+    if result is not None and not isinstance(result, list):
+        raise ToolError("DONKI returned an unexpected response; expected a JSON event list.")
+    return result
 
 
 # --------------------------------------------------------------------------- #

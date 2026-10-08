@@ -41,7 +41,9 @@ That produces a local image named `nasa-mcp`. Everything below uses it. Because 
 
 ## API key
 
-NASA-hosted endpoints (APOD, NeoWs, DONKI, EPIC, TechPort, TechTransfer) read your key from the `NASA_API_KEY` environment variable and fall back to `DEMO_KEY` if it's unset. `DEMO_KEY` is heavily rate-limited (30 req/hr, 50 req/day), so get a free key in seconds at <https://api.nasa.gov>.
+Keyed NASA endpoints (APOD, NeoWs, EPIC, TechPort, TechTransfer) read your key from the `NASA_API_KEY` environment variable and fall back to `DEMO_KEY` if it's unset. `DEMO_KEY` is heavily rate-limited (30 req/hr, 50 req/day), so get a free key in seconds at <https://api.nasa.gov>.
+
+DONKI uses the public `https://ccmc.gsfc.nasa.gov/DONKI-API/get/` endpoint and needs no API key. This replaces the retired DONKI route following [NASA's September 30, 2026 migration](https://ccmc.gsfc.nasa.gov/news/major-updates/). Its service options and parameters are unchanged.
 
 You pass the key into the container at runtime with `-e` — it is never baked into the image:
 
