@@ -1,0 +1,149 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="description" content="Connect your AI assistant to public NASA data with an open-source MCP server that runs locally in Docker.">
+  <meta name="theme-color" content="#101419">
+  <title>NASA MCP | RYASTRA</title>
+  <link rel="stylesheet" href="site.css">
+</head>
+<body>
+  <a class="skip" href="#main">Skip to content</a>
+  <header class="shell site-header">
+    <a class="brand" href="./">RYASTRA <span>/ NASA MCP</span></a>
+    <nav aria-label="Main navigation">
+      <a href="#setup">Setup</a>
+      <a href="#tools">Tools</a>
+      <a href="https://github.com/RYASTRA/nasa-mcp">GitHub ↗</a>
+    </nav>
+  </header>
+
+  <main id="main">
+    <section class="hero">
+      <div class="shell hero-inner">
+        <div class="hero-copy">
+          <h1>NASA data for your AI assistant.</h1>
+          <p>NASA MCP is an open-source Model Context Protocol server. Connect it to an MCP client to search public NASA archives, check space weather, or look up near-Earth objects from a conversation.</p>
+          <a class="button" href="#setup">Set up NASA MCP <span aria-hidden="true">↓</span></a>
+        </div>
+        <figure>
+          <img src="earthrise.jpg" width="1920" height="1080" alt="Earth rising above the lunar horizon, photographed from Apollo 8">
+          <figcaption><a href="https://svs.gsfc.nasa.gov/4593/">Earthrise</a> · Apollo 8 · NASA / Bill Anders</figcaption>
+        </figure>
+      </div>
+    </section>
+
+    <section class="shell section" id="setup" aria-labelledby="setup-title">
+      <div class="section-intro">
+        <h2 id="setup-title">Quick start</h2>
+        <p>Install and start Docker, then build the server on your computer. Your MCP client launches the container and communicates with it over standard input and output (stdio).</p>
+      </div>
+      <ol class="steps">
+        <li>
+          <h3>Build the Docker image</h3>
+          <pre><code>git clone https://github.com/RYASTRA/nasa-mcp.git
+cd nasa-mcp
+docker build -t nasa-mcp .</code></pre>
+        </li>
+        <li>
+          <h3>Connect your client</h3>
+          <details open>
+            <summary>Claude Desktop</summary>
+            <p>Add the <code>nasa</code> entry to the <code>mcpServers</code> section of <code>claude_desktop_config.json</code>, then restart Claude Desktop.</p>
+            <pre><code>{
+  "mcpServers": {
+    "nasa": {
+      "command": "docker",
+      "args": ["run", "--rm", "-i", "-e", "NASA_API_KEY", "nasa-mcp"],
+      "env": { "NASA_API_KEY": "your_key_here" }
+    }
+  }
+}</code></pre>
+            <p>Replace <code>your_key_here</code> with your key. For a first run using NASA’s demo key, omit the <code>env</code> entry and the two arguments <code>"-e", "NASA_API_KEY"</code>.</p>
+          </details>
+          <details>
+            <summary>Claude Code</summary>
+            <p>With <code>NASA_API_KEY</code> exported in the shell that launches Claude Code, register the server.</p>
+            <pre><code>claude mcp add nasa -- docker run --rm -i -e NASA_API_KEY nasa-mcp</code></pre>
+          </details>
+          <details>
+            <summary>Other MCP clients</summary>
+            <p>Choose a local stdio server, set the command to <code>docker</code>, and use the arguments from the Claude Desktop example. Set <code>NASA_API_KEY</code> through your client’s environment settings if you have a key.</p>
+          </details>
+          <p class="note">Some tools use a NASA API key. The server defaults to the rate-limited <code>DEMO_KEY</code> when the variable is unset. You can <a href="https://api.nasa.gov/">get a free NASA API key</a> and store it in your local client configuration.</p>
+        </li>
+        <li>
+          <h3>Try a prompt</h3>
+          <ul class="prompts">
+            <li>“Use NASA MCP to show me today’s Astronomy Picture of the Day.”</li>
+            <li>“Check DONKI for geomagnetic storms in the past week.”</li>
+            <li>“Find the closest asteroid approaches over the next seven days.”</li>
+          </ul>
+        </li>
+      </ol>
+    </section>
+
+    <section class="shell section" id="tools" aria-labelledby="tools-title">
+      <div class="section-intro">
+        <h2 id="tools-title">Tool reference</h2>
+        <p>Each tool exposes its parameter names and descriptions to your MCP client. Use the names below to ask your assistant for a specific source.</p>
+      </div>
+      <div class="catalog">
+        <article>
+          <h3>Earth &amp; space weather</h3>
+          <dl>
+            <dt>DONKI</dt><dd><code>donki</code> — solar flares, coronal mass ejections, and geomagnetic storms</dd>
+            <dt>Natural events</dt><dd><code>eonet_events</code>, <code>eonet_categories</code></dd>
+            <dt>EPIC</dt><dd><code>epic</code> — full-disk Earth images</dd>
+            <dt>Earth imagery layers</dt><dd><code>gibs_tile_url</code> — build a WMTS tile URL</dd>
+          </dl>
+        </article>
+        <article>
+          <h3>Asteroids &amp; spacecraft</h3>
+          <dl>
+            <dt>Near-Earth objects</dt><dd><code>neo_feed</code>, <code>neo_lookup</code>, <code>neo_browse</code></dd>
+            <dt>Small-body data</dt><dd><code>ssd_close_approaches</code>, <code>ssd_fireballs</code>, <code>ssd_sentry</code></dd>
+            <dt>Satellite orbits</dt><dd><code>tle_search</code>, <code>tle_get</code></dd>
+            <dt>Satellite Situation Center</dt><dd><code>ssc_observatories</code></dd>
+          </dl>
+        </article>
+        <article>
+          <h3>Planetary science &amp; media</h3>
+          <dl>
+            <dt>Exoplanet Archive</dt><dd><code>exoplanet_query</code> — query the archive using ADQL</dd>
+            <dt>Mars weather</dt><dd><code>mars_weather</code> — Curiosity REMS data</dd>
+            <dt>Planetary maps</dt><dd><code>trek_tile_url</code> — build a Solar System Treks tile URL</dd>
+            <dt>NASA media</dt><dd><code>apod</code>, <code>nivl_search</code>, <code>nivl_asset</code></dd>
+          </dl>
+        </article>
+        <article>
+          <h3>Open science &amp; technology</h3>
+          <dl>
+            <dt>Open Science Data Repository</dt><dd><code>osdr_search</code>, <code>osdr_study_files</code>, <code>osdr_study_metadata</code></dd>
+            <dt>Technology projects</dt><dd><code>techport_projects</code>, <code>techport_project</code></dd>
+            <dt>Technology transfer</dt><dd><code>tech_transfer</code> — find patents, software, and spinoffs</dd>
+          </dl>
+        </article>
+      </div>
+    </section>
+
+    <section class="shell section help" aria-labelledby="help-title">
+      <h2 id="help-title">Troubleshooting</h2>
+      <dl>
+        <dt>Docker reports that the image is missing</dt>
+        <dd>Run the build in step one, then confirm it exists with <code>docker images nasa-mcp</code>.</dd>
+        <dt>The container waits silently in a terminal</dt>
+        <dd>That is expected. The server waits for an MCP handshake. Use an MCP client, keep Docker’s <code>-i</code> flag, and omit <code>-t</code>.</dd>
+        <dt>A NASA endpoint is rate limited</dt>
+        <dd>Set a personal <code>NASA_API_KEY</code> in your client configuration and restart or reconnect the client.</dd>
+      </dl>
+    </section>
+  </main>
+
+  <footer class="shell site-footer">
+    <span>RYASTRA · Independent open-source project</span>
+    <a href="https://github.com/RYASTRA/nasa-mcp">Source code on GitHub ↗</a>
+  </footer>
+</body>
+</html>
