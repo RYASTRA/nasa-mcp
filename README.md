@@ -1,22 +1,24 @@
 # nasa-mcp
 
-A unified [MCP](https://modelcontextprotocol.io) server that exposes **all 16 of NASA's public APIs** (from the "Browse APIs" section of [api.nasa.gov](https://api.nasa.gov)) as tools an AI agent can call — one server, one config entry, the whole catalog.
+A unified [MCP](https://modelcontextprotocol.io) server that exposes the 16 APIs in the [NASA API portal](https://api.nasa.gov) and two NASA Earthdata APIs, CMR Search and Harmony.
 
 Built with [FastMCP](https://gofastmcp.com) + httpx, and shipped as a Docker image so it runs with **nothing but Docker** on your machine — no Python, uv, or pyenv required.
 
 ## What's covered
 
-26 tools across 16 APIs:
+33 tools across 18 APIs:
 
 | API | Tools |
 |-----|-------|
 | APOD | `apod` |
 | Asteroids NeoWs | `neo_feed`, `neo_lookup`, `neo_browse` |
+| CMR Search | `cmr_search_collections`, `cmr_search_granules`, `cmr_request` |
 | DONKI (space weather) | `donki` (CME, GST, FLR, IPS, SEP, MPC, RBE, HSS, CMEAnalysis, WSAEnlilSimulations, notifications) |
 | EONET | `eonet_events`, `eonet_categories` |
 | EPIC | `epic` |
 | Exoplanet Archive | `exoplanet_query` (ADQL via TAP) |
 | GIBS | `gibs_tile_url` (WMTS tile-URL builder) |
+| Harmony | `harmony_capabilities`, `harmony_submit_subset`, `harmony_job_status`, `harmony_request` |
 | Mars weather (Curiosity/MSL) | `mars_weather` |
 | NASA Image & Video Library | `nivl_search`, `nivl_asset` |
 | Open Science Data Repository | `osdr_search`, `osdr_study_files`, `osdr_study_metadata` |
@@ -54,6 +56,22 @@ docker run --rm -i -e NASA_API_KEY=your_key_here nasa-mcp
 The non-NASA-hosted services (EONET, Exoplanet Archive, Mars weather, NIVL, OSDR, SSC, SSD/CNEOS, TLE, GIBS, Trek) need no key. `mars_weather` pulls Curiosity's live REMS feed from `mars.nasa.gov`, which is keyless.
 
 > **Security note:** the key lives only in your `docker run -e` flag or your MCP client config — never commit it. `.dockerignore` keeps `.env` out of the build context (so it can't be baked into the image) and `.gitignore` excludes `.env` from version control.
+
+## Earthdata and LiDAR
+
+Public CMR searches work without a token. For Harmony processing and authorized CMR metadata, generate a bearer token from your [Earthdata Login profile](https://urs.earthdata.nasa.gov/) and set `EARTHDATA_TOKEN` in the server environment. With Docker, pass an existing environment variable with `-e EARTHDATA_TOKEN` or use `--env-file .env` with a local copy of `.env.example`. Use the same flags in your MCP client's Docker arguments.
+
+1. Search collections by short name, for example `GEDI02_A` version `002`, `ATL03`, or `ATL08`. Use the collection concept ID with `cmr_search_granules` to look up source files for an area and time range. The `cmr-search-after` response header can be passed as `search_after` on the next page with the same filters. [CMR Search documentation](https://cmr.earthdata.nasa.gov/search/site/docs/search/api.html)
+2. Call `harmony_capabilities` with the collection ID to see its supported filters, formats, and variables. For a first subset, pass the ID, a bounding box in west, south, east, north order, and a date range to `harmony_submit_subset`. Pass `max_results: 1` to limit an initial request to one input file. [Harmony capabilities and Coverages API](https://harmony.earthdata.nasa.gov/docs)
+3. Pass the returned `data.jobID` to `harmony_job_status` and use the result links from the finished job. Harmony controls the output formats and expiry. [Harmony Jobs API](https://harmony.earthdata.nasa.gov/docs#monitoring-jobs-with-the-jobs-api-and-the-workflow-ui)
+
+### Advanced Earthdata requests
+
+`cmr_request` accepts documented consumer paths under `/search/`, including concept and revision lookups, services, variables, tags, facets, timeline, holdings, and associations. Send JSON queries in `body.json_body`, AQL XML in `body.text` with `body.content_type: application/xml`, or form fields in `body.form`. Use `search_after` or `scroll_id` for the corresponding CMR pagination header. [CMR Search API reference](https://cmr.earthdata.nasa.gov/search/site/docs/search/api.html)
+
+`harmony_request` accepts Harmony's OGC Coverages, EDR, and WMS paths, plus job listing, bulk status, steps, pause, resume, cancel, preview control, labels, STAC, and S3 staging endpoints. For most transformations set `forceAsync: true` to get staged files through the Jobs API. `/cloud-access` returns temporary AWS credentials in the tool response. NASA controls access to restricted operations on both APIs. [Harmony API reference](https://harmony.earthdata.nasa.gov/docs)
+
+Both tools accept exact upstream parameter names in `query`. Use arrays for repeated parameters. For multipart uploads, use `body.files` entries with `field`, `filename`, `content_type`, and `base64_data`, and optionally `body.form` for other fields. Set `field` to `shapefile` for CMR and Harmony Coverages uploads. Responses include `status_code`, selected `headers`, and JSON in `data`, textual results in `text`, small binary results in `base64_data`, or a redirect in `location`. Large Harmony WMS images and existing staged files can return a direct `download_url`. For other oversized responses, narrow the search or request asynchronous processing for staged file links.
 
 ## Run
 
@@ -104,7 +122,7 @@ Then ask things like *"Show me today's APOD,"* *"Which asteroids pass within 5 l
 | Repo | What it is |
 |---|---|
 | [nasa-defense](https://github.com/RYASTRA/nasa-defense) | Planetary-defense watch (the original watcher engine) |
-| **nasa-mcp** | All 16 NASA public APIs as an MCP server (R&D layer) *(this repo)* |
+| **nasa-mcp** | NASA API portal and Earthdata tools as an MCP server *(this repo)* |
 | [nasa-new-worlds](https://github.com/RYASTRA/nasa-new-worlds) | New-worlds watch — exoplanet confirmations |
 | [nasa-observatory](https://github.com/RYASTRA/nasa-observatory) | Fleet dashboard — one tile per watcher |
 | [nasa-space-biology](https://github.com/RYASTRA/nasa-space-biology) | Faceted explorer for OSDR space-biology studies |
