@@ -86,6 +86,7 @@ docker build -t nasa-mcp .</code></pre>
             <p>Choose a local stdio server, set the command to <code>docker</code>, and use the arguments from the Claude Desktop example. Set <code>NASA_API_KEY</code> through your client’s environment settings if you have a key.</p>
           </details>
           <p class="note">Some tools use a NASA API key. The server defaults to the rate-limited <code>DEMO_KEY</code> when the variable is unset. You can <a href="https://api.nasa.gov/">get a free NASA API key</a> and store it in your local client configuration.</p>
+          <p class="note">Public CMR searches work without credentials. Harmony uses a personal <a href="https://urs.earthdata.nasa.gov/">Earthdata Login</a> bearer token. Set <code>EARTHDATA_TOKEN</code> in the client's environment and add <code>-e EARTHDATA_TOKEN</code> before <code>nasa-mcp</code> in the Docker arguments.</p>
         </li>
         <li>
           <h3>Try a prompt</h3>
@@ -93,6 +94,7 @@ docker build -t nasa-mcp .</code></pre>
             <li>“Use NASA MCP to show me today’s Astronomy Picture of the Day.”</li>
             <li>“Check DONKI for geomagnetic storms in the past week.”</li>
             <li>“Find the closest asteroid approaches over the next seven days.”</li>
+            <li>“Find GEDI L2A observations over my study area, then check which subsets Harmony can create.”</li>
           </ul>
         </li>
       </ol>
@@ -102,6 +104,7 @@ docker build -t nasa-mcp .</code></pre>
       <div class="section-intro">
         <h2 id="tools-title">Tool reference</h2>
         <p>Each tool exposes its parameter names and descriptions to your MCP client. Use the names below to ask your assistant for a specific source.</p>
+        <p><a href="https://ryastra.github.io/nasa-geographic/">NASA Geographic</a> provides a browser interface for finding and subsetting LiDAR data.</p>
       </div>
       <div class="catalog">
         <article>
@@ -111,6 +114,8 @@ docker build -t nasa-mcp .</code></pre>
             <dt>Natural events</dt><dd><code>eonet_events</code>, <code>eonet_categories</code></dd>
             <dt>EPIC</dt><dd><code>epic</code> — full-disk Earth images</dd>
             <dt>Earth imagery layers</dt><dd><code>gibs_tile_url</code> — build a WMTS tile URL</dd>
+            <dt>CMR Search</dt><dd><code>cmr_search_collections</code>, <code>cmr_search_granules</code>, <code>cmr_request</code></dd>
+            <dt>Earthdata Harmony</dt><dd><code>harmony_capabilities</code>, <code>harmony_submit_subset</code>, <code>harmony_job_status</code>, <code>harmony_request</code></dd>
           </dl>
         </article>
         <article>

@@ -2,7 +2,7 @@
 nasa-mcp: a unified MCP server for NASA's public APIs (api.nasa.gov and friends).
 
 One server exposing tools for all 16 APIs listed in the "Browse APIs" section of
-api.nasa.gov:
+api.nasa.gov, plus NASA Earthdata's CMR Search and Harmony:
 
   APOD, Asteroids NeoWs, DONKI, EONET, EPIC, Exoplanet Archive, GIBS, Mars
   weather (Curiosity/MSL), NASA Image & Video Library, Open Science Data Repository,
@@ -27,6 +27,8 @@ from urllib.parse import quote
 import httpx
 from fastmcp import FastMCP
 from fastmcp.exceptions import ToolError
+
+from nasa_mcp.earthdata import register_earthdata
 
 try:  # optional convenience: load NASA_API_KEY from a local .env if available
     from dotenv import load_dotenv
@@ -66,10 +68,13 @@ mcp = FastMCP(
         "Tools for NASA's public APIs. Dates are YYYY-MM-DD unless noted "
         "(DONKI/CNEOS accept the same format). Keyed NASA endpoints use the "
         "NASA_API_KEY env var, defaulting to the rate-limited DEMO_KEY. "
-        "DONKI uses the public CCMC API and needs no key."
+        "DONKI uses the public CCMC API and needs no key. Earthdata tools use "
+        "the EARTHDATA_TOKEN environment variable for authenticated requests."
     ),
     lifespan=_lifespan,
 )
+
+register_earthdata(mcp, _http)
 
 
 def _scrub(text: str) -> str:
