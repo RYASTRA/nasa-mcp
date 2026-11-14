@@ -3,18 +3,18 @@ name = "nasa-mcp"
 version = "0.1.0"
 description = "A unified MCP server exposing NASA's public APIs (api.nasa.gov and friends)."
 readme = "README.md"
-requires-python = ">=3.14"
+requires-python = ">=3.15.2"
 license = { text = "MIT" }
 authors = [{ name = "Ryan" }]
 keywords = ["nasa", "mcp", "model-context-protocol", "api", "space"]
 dependencies = [
-    "fastmcp>=3.4.7,<4",
-    "httpx>=0.28.1",
-    "python-dotenv>=1.2.3",
+    "fastmcp",
+    "httpx",
+    "python-dotenv",
 ]
 
 [project.optional-dependencies]
-dev = ["pytest>=9.1.1"]
+dev = ["pytest"]
 
 [project.scripts]
 nasa-mcp = "nasa_mcp.server:main"

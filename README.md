@@ -36,7 +36,7 @@ Per-API parameter reference lives in [`docs/`](docs/).
 You need only **Docker** installed and running. The image isn't published to a registry, so build it once from the repo root:
 
 ```bash
-docker build -t nasa-mcp .
+docker build --pull --no-cache -t nasa-mcp .
 ```
 
 That produces a local image named `nasa-mcp`. Everything below uses it. Because the image is local-only, the build must come **before** any `docker run` — otherwise Docker tries to pull a registry image that doesn't exist and fails. (Confirm it built with `docker images nasa-mcp`.)
@@ -85,7 +85,7 @@ It then waits on stdin for a JSON-RPC handshake — that's expected; your MCP cl
 
 ## Use it from Claude
 
-Build the image first (`docker build -t nasa-mcp .`). The tag `nasa-mcp` refers to that **local** image — there is no registry copy, so if you skip the build the client will fail trying to pull it.
+Build the image first (`docker build --pull --no-cache -t nasa-mcp .`). The tag `nasa-mcp` refers to that **local** image — there is no registry copy, so if you skip the build the client will fail trying to pull it.
 
 **Claude Desktop** — add to `claude_desktop_config.json`:
 

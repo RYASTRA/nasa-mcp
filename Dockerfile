@@ -5,10 +5,10 @@
 # the host. The NASA API key is supplied at runtime via -e NASA_API_KEY, never
 # baked into the image.
 #
-# Build the server image (default):  docker build -t nasa-mcp .
-# Build + run the tests:             docker build --target test -t nasa-mcp-test . && docker run --rm nasa-mcp-test
+# Build the server image (default):  docker build --pull --no-cache -t nasa-mcp .
+# Build + run the tests:             docker build --pull --no-cache --target test -t nasa-mcp-test . && docker run --rm nasa-mcp-test
 
-FROM python:3.14.7-slim AS base
+FROM python:3-slim AS base
 
 # PYTHONUNBUFFERED keeps the stdio JSON-RPC stream flowing (no buffered stalls).
 ENV PYTHONUNBUFFERED=1 \
